@@ -1,0 +1,29 @@
+<?
+	const {importHead}=globals.functions;
+?><!DOCTYPE html>
+<html>
+	<head>
+		<?=importHead({
+			input,
+			title:"Minecraft Server Info",
+			tabs:2,
+			css:[
+				"/css/main.css",
+				//"/css/dynamic.css?import=red,green",
+			],
+			script:[
+				"https://cdn.socket.io/4.5.4/socket.io.min.js",
+			],
+		})?>
+	</head>
+	<body>
+		<h1>Minecraft Server Info</h1>
+		<p>Verbindungsstatus: <code style="color:red;" id=code_connected>nicht verbunden</code></p>
+		<p>
+			<button id=button_connect>verbinden</button>
+			<button disabled id=button_disconnect>Verbindung schließen</button>
+		</p>
+		<div id=div_servers></div>
+		<script src="/web/minecraftServerInfo/app.js"></script>
+	</body>
+</html>
