@@ -2,6 +2,7 @@ const socketIo=require("socket.io");
 const {exec}=require("child_process");
 const fetch=require("node-fetch");
 
+const user="lff";
 const ip="192.168.178.48";
 const minecraftServerRunnerPath="/home/lff/Programmes/MinecraftServer/minecraftServerStarter";
 const serversJson=minecraftServerRunnerPath+"/servers.json";
@@ -14,7 +15,7 @@ this.start=()=>{
 	this.servers=[];
 	this.status={};
 
-	exec(`ssh ${ip} cat ${configJson}`,(error,stdout,stderr)=>{
+	exec(`ssh ${user}@${ip} cat ${configJson}`,(error,stdout,stderr)=>{
 		if(error){
 			log("ERROR: "+error);
 		}
@@ -23,7 +24,7 @@ this.start=()=>{
 		this.config=json;
 		this.startStep+=1;
 	});
-	exec(`ssh ${ip} -y cat ${serversJson}`,(error,stdout,stderr)=>{
+	exec(`ssh ${user}@${ip} -y cat ${serversJson}`,(error,stdout,stderr)=>{
 		if(error){log("ERROR: "+error);}
 		if(stderr){log(stderr)}
 		const json=JSON.parse(stdout.trim());
