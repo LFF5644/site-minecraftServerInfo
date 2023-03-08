@@ -23,7 +23,15 @@
 			<button id=button_connect>verbinden</button>
 			<button disabled id=button_disconnect>Verbindung schließen</button>
 		</p>
-		<div id=div_servers></div>
+		<p>
+			<label>
+				Server auswählen:
+				<select id=select_server>
+					<option value=$players>-- Server werden geladen --</option>
+				</select>
+			</label>
+		</p>
+		<div id=div_server></div>
 		<script src="/web/minecraftServerInfo/app.js"></script>
 	</body>
 </html>
