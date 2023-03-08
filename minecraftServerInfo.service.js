@@ -16,17 +16,15 @@ this.start=()=>{
 	this.status={};
 
 	exec(`ssh ${user}@${ip} cat ${configJson}`,(error,stdout,stderr)=>{
-		if(error){
-			log("ERROR: "+error);
-		}
-		if(stderr){log(stderr)}
+		if(error) log("ERROR: "+error);
+		if(stderr) log("STDERR: "+stderr);
 		const json=JSON.parse(stdout.trim());
 		this.config=json;
 		this.startStep+=1;
 	});
 	exec(`ssh ${user}@${ip} -y cat ${serversJson}`,(error,stdout,stderr)=>{
-		if(error){log("ERROR: "+error);}
-		if(stderr){log(stderr)}
+		if(error) log("ERROR: "+error);
+		if(stderr) log("STDERR: "+stderr);
 		const json=JSON.parse(stdout.trim());
 		this.servers=json;
 		this.startStep+=1;
@@ -73,11 +71,15 @@ this.startNext=data=>{
 	});
 
 	this.io.on("connection",socket=>{
+		if(!this.serviceRunning){
+			socket.emit("msg","Service offline");
+			socket.disconnect();
+			return;
+		}
 		log("socket "+socket.id+" has connected");
 
 		socket.emit("get-servers",this.servers);
 		socket.emit("get-serverStatus",this.status);
-		socket.emit("update-frame");
 
 		socket.on("disconnect",()=>{
 			log("socket "+socket.id+" has disconnected");
