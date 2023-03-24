@@ -3,7 +3,7 @@ let serverStatus={};
 let hasServers=false;
 let hasServerStatus=false;
 
-const socket=io({path:"/bind/socket/minecraftServerInfo/socket.io/"});
+const socket=io({path:"/bind/socket/minecraftServerInfo"});
 const ids={
 	code_connected: document.getElementById("code_connected"),
 	button_connect: document.getElementById("button_connect"),
