@@ -7,7 +7,7 @@ const {
 	init,
 	node,
 	node_dom,
-	//node_map,
+	node_map,
 	hook_effect,
 	hook_memo,
 	hook_model,
@@ -16,10 +16,27 @@ const {
 const model={
 	init:()=>({
 		connected: false,
+		serverStatus: {},
+		servers: [],
 	}),
-	setConnected:(state,bool)=>({
+	setConnected:(state,connected)=>({
 		...state,
-		connected: bool,
+		connected,
+	}),
+	setServers:(state,servers)=>({
+		...state,
+		servers,
+	}),
+	setServerStatus:(state,serverStatus)=>({
+		...state,
+		serverStatus,
+	}),
+	setServerStatusId:(state,id,status)=>({
+		...state,
+		serverStatus: {
+			...state.serverStatus,
+			[id]: status,
+		},
 	}),
 };
 
@@ -29,12 +46,34 @@ function getToken(){
 	return null;
 }
 function ViewOverview({state,actions}){return[
-	node_dom("h1[innerText=Test]",{
+	node_dom("h1[innerText=Server Übersicht]",{
 		S:{
 			color: socket.connected?"unset":"red",
 		},
 	}),
+	node_map(Server,Object.keys(state.serverStatus),{state,actions}),
 ]}
+function Server({I,state,actions}){
+	const server=state.servers.find(item=>item.id===I);
+	const status=state.serverStatus[I];
+	
+	return[
+		server.serverType!=="proxy/bungee"&&
+		node_dom("p",{
+			innerText: server.name+": ",
+		},[
+			status.httpOnline&&
+			node_dom("span[style=color:green]",{
+				innerText: (
+					!status.running&&
+					status.status==="Sleeping"
+				)?"(Schläft)":status.players.length,
+			}),
+			!status.httpOnline&&
+			node_dom("span[style=color:red][innerText=(Offline)]"),
+		]),
+	];
+}
 
 init(()=>{
 	const [state,actions]=hook_model(model);
@@ -53,6 +92,19 @@ init(()=>{
 		socket.on("disconnect",()=>{
 			console.log("Disconnected");
 			actions.setConnected(false);
+		});
+		socket.on("get-serverStatus",data=>{
+			console.log("Getting: serverStatus",data);
+			actions.setServerStatus(data);
+		});
+		socket.on("get-servers",data=>{
+			console.log("Getting: servers",data);
+			actions.setServers(data);
+		});
+		socket.on("update-serverStatus",data=>{
+			const {id,status}=data;
+			actions.setServerStatusId(id,status);
+			console.log("Update server: "+id);
 		});
 	});
 

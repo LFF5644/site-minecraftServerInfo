@@ -7,6 +7,14 @@ const ip="192.168.178.48";
 const minecraftServerRunnerPath="/home/lff/Programmes/MinecraftServer/minecraftServerStarter";
 const serversJson=minecraftServerRunnerPath+"/servers.json";
 const configJson=minecraftServerRunnerPath+"/config.json";
+const statusTemplate={
+	running:false,
+	status:"Offline",
+	statusColor:"red",
+	playersOnline:0,
+	players:[],
+	pid:null,
+};
 
 this.start=()=>{
 	this.serviceRunning=true;
@@ -107,9 +115,11 @@ this.handleServerResponse=data=>{
 
 		this.status[key]=(
 			serverOnline?{
+				...statusTemplate,
 				...serverResponse,
 				httpOnline: true,
 			}:{
+				...statusTemplate,
 				httpOnline:false,
 			}
 		);
@@ -119,13 +129,17 @@ this.handleServerResponse=data=>{
 			JSON.stringify(this.status[key])
 		){
 			this.io.emit("update-serverStatus",{
-				serverKey: key,
-				status: this.status[key],
+				id: key,
+				status: {
+					id: key,
+					...this.status[key],
+				},
 			});
 		}
 	}
 }
 this.stop=()=>{
 	this.io.emit("shutdown",0);
+	this.io.close();
 	this.serviceRunning=false;
 }
