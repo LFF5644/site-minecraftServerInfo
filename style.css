@@ -1,0 +1,31 @@
+body{
+	user-select: none;
+	-moz-user-select: none;
+}
+button{
+	cursor: pointer;
+}
+
+h1.withButton{
+	display: flex;
+	margin-left: 0;
+	text-align: center;
+}
+h1.withButton > span{
+	flex: 1;
+}
+h1.withButton > button{
+	color:red;
+	border-radius:5px;
+	border: 2px darkblue solid;
+}
+h1.withButton > button:hover{
+	border-color: red;
+}
+
+p.serverItem > span.name{
+	cursor: pointer;
+}
+p.serverItem > span.name:hover{
+	text-decoration: underline;
+}

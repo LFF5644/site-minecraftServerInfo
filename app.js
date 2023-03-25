@@ -18,6 +18,7 @@ const model={
 		connected: false,
 		serverStatus: {},
 		servers: [],
+		view: "overview",
 	}),
 	setConnected:(state,connected)=>({
 		...state,
@@ -38,6 +39,10 @@ const model={
 			[id]: status,
 		},
 	}),
+	setView:(state,view)=>({
+		...state,
+		view,
+	}),
 };
 
 function getToken(){
@@ -48,10 +53,14 @@ function getToken(){
 function ViewOverview({state,actions}){return[
 	node_dom("h1[innerText=Server Übersicht]",{
 		S:{
-			color: socket.connected?"unset":"red",
+			color: socket.connected?"":"red",
 		},
 	}),
-	node_map(Server,Object.keys(state.serverStatus),{state,actions}),
+	node_map(
+		Server,
+		hook_memo(Object.keys,[state.serverStatus]),
+		{state,actions}
+	),
 ]}
 function Server({I,state,actions}){
 	const server=state.servers.find(item=>item.id===I);
@@ -59,18 +68,58 @@ function Server({I,state,actions}){
 	
 	return[
 		server.serverType!=="proxy/bungee"&&
-		node_dom("p",{
-			innerText: server.name+": ",
-		},[
+		node_dom("p[className=serverItem]",null,[
+			node_dom("span[className=name]",{
+				innerText: server.name+":",
+				onclick:()=> actions.setView("$"+I),
+			}),
+
 			status.httpOnline&&
 			node_dom("span[style=color:green]",{
-				innerText: (
-					!status.running&&
-					status.status==="Sleeping"
-				)?"(Schläft)":status.players.length,
+				innerText:" "+(
+					(
+						!status.running&&
+						status.status==="Sleeping"
+					)
+					?	"(Schläft)"
+					:	status.players.length
+				),
 			}),
+
 			!status.httpOnline&&
-			node_dom("span[style=color:red][innerText=(Offline)]"),
+			node_dom("span[style=color:red][innerText= (Offline)]"),
+		]),
+	];
+}
+function ViewServerInfo({id,state,actions}){
+	const server=state.servers.find(item=>item.id===id);
+	const status=state.serverStatus[id];
+
+	return[
+		node_dom("h1[className=withButton]",null,[
+			node_dom("button[innerText=Back]",{
+				onclick: ()=> actions.setView("overview"),
+			}),
+			node_dom("span",{
+				innerText: server.name,
+				title: id,
+			}),
+		]),
+		node_dom("p[innerText=Status: ]",null,[
+			node_dom("span",{
+				innerText: status.status,
+				S:{
+					color: status.statusColor||"",
+				},
+			}),
+		]),
+		node_dom("p[innerText=Spieler: ]",null,[
+			node_dom("span",{
+				innerText: status.players.length===0?"Keine":status.players.join(", "),
+				S:{
+					color: status.players.length===0?"red":"green",
+				},
+			}),
 		]),
 	];
 }
@@ -109,6 +158,13 @@ init(()=>{
 	});
 
 	return[null,[
+		state.view==="overview"&&
 		node(ViewOverview,{state,actions}),
+
+		state.view.startsWith("$")&&
+		node(ViewServerInfo,{
+			id: state.view.substring(1),
+			state, actions,
+		}),
 	]];
 });
