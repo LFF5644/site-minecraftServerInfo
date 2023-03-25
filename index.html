@@ -1,6 +1,10 @@
 <?
 	const {importHead}=globals.functions;
+	const {hostname}=require("os");
+	const isDev=hostname()!=="lff-raspberrypi";
 ?><!DOCTYPE html>
+<!--Created 05.03.2023 at 10:32-->
+<!--Updated 25.03.2023 at 10:21-->
 <html>
 	<head>
 		<?=importHead({
@@ -12,26 +16,14 @@
 				//"/css/dynamic.css?import=red,green",
 			],
 			script:[
-				"https://cdn.socket.io/4.5.4/socket.io.min.js",
+				((input.useLocal||input.legacy)?"/files/other/socket.io/":"https://cdn.socket.io/4.5.4/")+"socket.io.min.js",
+				((input.useLocal||input.legacy)?"/files/other/lui/":"https://cdn.jsdelivr.net/gh/L3P3/lui@7c057f498ee8813053d7f7cff3af7141b53ced03/")+(isDev&&!input.legacy?"lui.dev.js":"lui.legacy.js"),
 			],
 		})?>
 	</head>
 	<body>
-		<h1>Minecraft Server Info</h1>
-		<p>Verbindungsstatus: <code style="color:red;" id=code_connected>nicht verbunden</code></p>
-		<p>
-			<button id=button_connect>verbinden</button>
-			<button disabled id=button_disconnect>Verbindung schließen</button>
-		</p>
-		<p>
-			<label>
-				Server auswählen:
-				<select id=select_server>
-					<option value=$players>-- Server werden geladen --</option>
-				</select>
-			</label>
-		</p>
-		<div id=div_server></div>
-		<script src="/web/minecraftServerInfo/app.js"></script>
+		<h1>Web Frame Work kaput oder Browser zu alt!</h1>
+		<noscript><h1>Außerdem wird kein JavaScript unterstützt!</h1></noscript>
+		<script src=<?=((isDev||input.raw)&&!input.build)?"/web/minecraftServerInfo/app.js":"/web/minecraftServerInfo/build/app.js"?>></script>
 	</body>
 </html>

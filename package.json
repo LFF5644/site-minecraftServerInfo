@@ -1,0 +1,23 @@
+{
+  "name": "minecraftServerInfo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LFF5644/site-minecraftServerInfo.git"
+  },
+  "keywords": [],
+  "author": "LFF5644",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/LFF5644/site-minecraftServerInfo/issues"
+  },
+  "homepage": "https://lff.one/minecraftServerInfo",
+  "devDependencies": {
+    "lui": "github:L3P3/lui"
+  }
+}
