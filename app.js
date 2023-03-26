@@ -13,10 +13,20 @@ const {
 	hook_model,
 }=lui;
 
+const statusTemplate={
+	id: null,
+	pid: null,
+	players: [],
+	running: false,
+	socketOnline: false,
+	status: "Offline",
+	statusColor: "red",
+};
+
 const model={
 	init:()=>({
 		connected: false,
-		serverStatus: {},
+		serverStatus: [],
 		servers: [],
 		view: "overview",
 	}),
@@ -32,16 +42,48 @@ const model={
 		...state,
 		serverStatus,
 	}),
-	setServerStatusId:(state,id,status)=>({
+	changeServerStatusById:(state,id,status)=>({
 		...state,
-		serverStatus: {
-			...state.serverStatus,
-			[id]: status,
-		},
+		serverStatus: state.serverStatus
+			.map(item=>item.id!==id?item:{
+				...statusTemplate,
+				...status,
+			}),
 	}),
 	setView:(state,view)=>({
 		...state,
 		view,
+	}),
+	updateServerStatusKey:(state,{id,key,value})=>({
+		...state,
+		serverStatus: state.serverStatus
+			.map(item=>item.id!==id?item:{
+				...statusTemplate,
+				...item,
+				[key]: value,
+			}),
+	}),
+	addPlayerToServerStatus:(state,{id,playerName})=>({
+		...state,
+		serverStatus: state.serverStatus
+			.map(item=>item.id!==id?item:{
+				...statusTemplate,
+				...item,
+				players: [
+					...item.players,
+					playerName,
+				],
+			}),
+	}),
+	removePlayerFromServerStatus:(state,{id,playerName})=>({
+		...state,
+		serverStatus: state.serverStatus
+			.map(item=>item.id!==id?item:{
+				...statusTemplate,
+				...item,
+				players: item.players
+					.filter(item=>item!==playerName),
+			}),
 	}),
 };
 
@@ -56,45 +98,39 @@ function ViewOverview({state,actions}){return[
 			color: socket.connected?"":"red",
 		},
 	}),
-	node_map(
-		Server,
-		hook_memo(Object.keys,[state.serverStatus]),
-		{state,actions}
-	),
+	node_map(Server,state.serverStatus,{state,actions}),
 ]}
 function Server({I,state,actions}){
-	const server=state.servers.find(item=>item.id===I);
-	const status=state.serverStatus[I];
+	const server=state.servers.find(item=>item.id===I.id);
 	
 	return[
 		server.serverType!=="proxy/bungee"&&
 		node_dom("p[className=serverItem]",null,[
 			node_dom("span[className=name]",{
 				innerText: server.name+":",
-				onclick:()=> actions.setView("$"+I),
+				onclick:()=> actions.setView("$"+I.id),
 			}),
 
-			status.httpOnline&&
+			I.socketOnline&&
 			node_dom("span[style=color:green]",{
 				innerText:" "+(
 					(
-						!status.running&&
-						status.status==="Sleeping"
+						!I.running&&
+						I.status==="Sleeping"
 					)
 					?	"(Schläft)"
-					:	status.players.length
+					:	I.players.length
 				),
 			}),
 
-			!status.httpOnline&&
+			!I.socketOnline&&
 			node_dom("span[style=color:red][innerText= (Offline)]"),
 		]),
 	];
 }
 function ViewServerInfo({id,state,actions}){
 	const server=state.servers.find(item=>item.id===id);
-	const status=state.serverStatus[id];
-
+	const status=state.serverStatus.find(item=>item.id===id);
 	return[
 		node_dom("h1[className=withButton]",null,[
 			node_dom("button[innerText=Back]",{
@@ -142,19 +178,14 @@ init(()=>{
 			console.log("Disconnected");
 			actions.setConnected(false);
 		});
-		socket.on("get-serverStatus",data=>{
-			console.log("Getting: serverStatus",data);
-			actions.setServerStatus(data);
-		});
-		socket.on("get-servers",data=>{
-			console.log("Getting: servers",data);
-			actions.setServers(data);
-		});
-		socket.on("update-serverStatus",data=>{
-			const {id,status}=data;
-			actions.setServerStatusId(id,status);
-			console.log("Update server: "+id);
-		});
+		socket.on("serverStatus",actions.setServerStatus);
+		socket.on("servers",actions.setServers);
+		socket.on("serverStatusUpdateFull",actions.changeServerStatusById);
+		socket.on("updateStatusKey",actions.updateServerStatusKey);
+		socket.on("playerJoin",actions.addPlayerToServerStatus);
+		socket.on("playerLeft",actions.removePlayerFromServerStatus);
+
+		socket.onAny(console.log);
 	});
 
 	return[null,[

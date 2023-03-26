@@ -1,4 +1,5 @@
 const socketIo=require("socket.io");
+const socketIoClient=require("socket.io-client");
 const {exec}=require("child_process");
 const fetch=require("node-fetch");
 
@@ -8,20 +9,22 @@ const minecraftServerRunnerPath="/home/lff/Programmes/MinecraftServer/minecraftS
 const serversJson=minecraftServerRunnerPath+"/servers.json";
 const configJson=minecraftServerRunnerPath+"/config.json";
 const statusTemplate={
-	running:false,
-	status:"Offline",
-	statusColor:"red",
-	playersOnline:0,
-	players:[],
-	pid:null,
+	id: null,
+	pid: null,
+	players: [],
+	running: false,
+	socketOnline: false,
+	status: "Offline",
+	statusColor: "red",
 };
 
 this.start=()=>{
 	this.serviceRunning=true;
+	this.socketServers=[];
 	this.startStep=0;
 	this.config={};
 	this.servers=[];
-	this.status={};
+	this.status=[];
 
 	exec(`ssh ${user}@${ip} cat ${configJson}`,(error,stdout,stderr)=>{
 		if(error) log("ERROR: "+error);
@@ -47,9 +50,9 @@ this.start=()=>{
 		}
 		setTimeout(fn,3e2);
 	}
-}
+};
 this.startNext=data=>{
-	const fn=(()=>{
+	/*const fn=(()=>{
 		for(let index in this.servers){
 			const server=this.servers[index];
 			if(!server.httpPort) continue;
@@ -71,6 +74,113 @@ this.startNext=data=>{
 		if(this.serviceRunning) setTimeout(fn,2e3);
 	});
 	fn();
+	*/
+	for(const index in this.servers){
+		const server=this.servers[index];
+		this.status.push({
+			...statusTemplate,
+			id: server.id,
+		});
+	}
+	for(const index in this.servers){
+		const server=this.servers[index];
+		if(!server.socketPort) continue;
+		const socket=socketIoClient(`http://${ip}:${server.socketPort}`);
+		this.socketServers.push({
+			id: server.id,
+			socket,
+		});
+
+		socket.on("connect",()=>{
+			console.log(server.name+": "+socket.id);
+
+			const index=this.status.findIndex(item=>item.id===server.id);
+			if(index===-1){
+				log("Server id "+server.id+" cant found in this.status");
+				return;
+			}
+			this.status[index]={
+				...this.status[index],
+				socketOnline: true,
+			};
+			this.io.emit("updateStatusKey",{
+				id: server.id,
+				key: "socketOnline",
+				value: true,
+			});
+
+			socket.on("serverStatus",status=>{
+				this.status[index]={
+					...statusTemplate,
+					...status,
+				};
+				this.io.emit("serverStatusUpdateFull",server.id,this.status[index]);
+			});
+			socket.on("playerJoin",playerName=>{
+				this.status[index]={
+					...statusTemplate,
+					...this.status[index],
+					players:[
+						...this.status[index].players,
+						playerName,
+					],
+				};
+				this.io.emit("playerJoin",{
+					id: server.id,
+					playerName,
+				});
+			});
+			socket.on("playerLeft",playerName=>{
+				this.status[index]={
+					...statusTemplate,
+					...this.status[index],
+					players: this.status[index].players
+						.filter(item=>item!==playerName),
+				};
+				this.io.emit("playerLeft",{
+					id: server.id,
+					playerName,
+				});
+			});
+			socket.on("disconnect",()=>{
+				const index=this.status.findIndex(item=>item.id===server.id);
+				if(index===-1){
+					log("Server id "+server.id+" cant found in this.status");
+					return;
+				}
+				this.status[index]={
+					...statusTemplate,
+					...this.status[index],
+					socketOnline: false,
+				};
+				this.io.emit("updateStatusKey",{
+					id: server.id,
+					key: "socketOnline",
+					value: false,
+				});
+			});
+			socket.on("updateStatusKey",(key,value)=>{
+				this.status[index]={
+					...statusTemplate,
+					...this.status[index],
+					[key]: value,
+				};
+				this.io.emit("updateStatusKey",{
+					id: server.id,
+					key, value,
+				});
+			});
+			socket.on("loadStatusTemplate",()=>{
+				this.status[index]={
+					...statusTemplate,
+					id: this.status[index].id,
+				};
+				this.io.emit("loadStatusTemplate",server.id);
+			});
+
+			socket.emit("serverStatus");
+		});
+	}
 	
 	this.io=socketIo(22663,{
 		cors:{
@@ -86,8 +196,8 @@ this.startNext=data=>{
 		}
 		log("socket "+socket.id+" has connected");
 
-		socket.emit("get-servers",this.servers);
-		socket.emit("get-serverStatus",this.status);
+		socket.emit("servers",this.servers);
+		socket.emit("serverStatus",this.status);
 
 		socket.on("disconnect",()=>{
 			log("socket "+socket.id+" has disconnected");
@@ -99,8 +209,8 @@ this.startNext=data=>{
 			socket.emit("get-serverStatus",this.status);
 		});
 	});
-}
-this.handleServerResponse=data=>{
+};
+/*this.handleServerResponse=data=>{
 	const {
 		serverOnline,
 		serverResponse,
@@ -117,10 +227,10 @@ this.handleServerResponse=data=>{
 			serverOnline?{
 				...statusTemplate,
 				...serverResponse,
-				httpOnline: true,
+				socketOnline: true,
 			}:{
 				...statusTemplate,
-				httpOnline:false,
+				socketOnline:false,
 			}
 		);
 
@@ -137,9 +247,12 @@ this.handleServerResponse=data=>{
 			});
 		}
 	}
-}
+}*/
 this.stop=()=>{
 	this.io.emit("shutdown",0);
 	this.io.close();
+	for(const server of this.socketServers){
+		server.socket.disconnect();
+	}
 	this.serviceRunning=false;
-}
+};
