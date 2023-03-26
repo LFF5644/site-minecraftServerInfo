@@ -100,6 +100,7 @@ this.startNext=data=>{
 				return;
 			}
 			this.status[index]={
+				...statusTemplate,
 				...this.status[index],
 				socketOnline: true,
 			};
@@ -143,11 +144,6 @@ this.startNext=data=>{
 				});
 			});
 			socket.on("disconnect",()=>{
-				const index=this.status.findIndex(item=>item.id===server.id);
-				if(index===-1){
-					log("Server id "+server.id+" cant found in this.status");
-					return;
-				}
 				this.status[index]={
 					...statusTemplate,
 					...this.status[index],
@@ -174,6 +170,7 @@ this.startNext=data=>{
 				this.status[index]={
 					...statusTemplate,
 					id: this.status[index].id,
+					socketOnline: this.status[index].socketOnline,
 				};
 				this.io.emit("loadStatusTemplate",server.id);
 			});

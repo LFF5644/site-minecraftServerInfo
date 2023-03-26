@@ -85,6 +85,15 @@ const model={
 					.filter(item=>item!==playerName),
 			}),
 	}),
+	setServerStatusToTemplate:(state,id)=>({
+		...state,
+		serverStatus: state.serverStatus
+			.map(item=>item.id!==id?item:{
+				...statusTemplate,
+				id: item.id,
+				socketOnline: item.socketOnline,
+			}),
+	}),
 };
 
 function getToken(){
@@ -184,6 +193,7 @@ init(()=>{
 		socket.on("updateStatusKey",actions.updateServerStatusKey);
 		socket.on("playerJoin",actions.addPlayerToServerStatus);
 		socket.on("playerLeft",actions.removePlayerFromServerStatus);
+		socket.on("loadStatusTemplate",actions.setServerStatusToTemplate);
 
 		socket.onAny(console.log);
 	});
