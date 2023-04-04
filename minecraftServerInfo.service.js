@@ -19,7 +19,7 @@ const statusTemplate={
 };
 
 this.start=()=>{
-	this.serviceRunning=true;
+	this.serviceRunning=false;
 	this.socketServers=[];
 	this.startStep=0;
 	this.config={};
@@ -27,16 +27,24 @@ this.start=()=>{
 	this.status=[];
 
 	exec(`ssh ${user}@${ip} cat ${configJson}`,(error,stdout,stderr)=>{
-		if(error) log("ERROR: "+error);
-		if(stderr) log("STDERR: "+stderr);
-		const json=JSON.parse(stdout.trim());
+		if(error||stderr){
+			log("ERROR: "+error);
+			log("STDERR: "+stderr);
+			log("STDOUT: "+stdout);
+			return;
+		}
+		const json=JSON.parse(stdout.toString("utf-8").trim());
 		this.config=json;
 		this.startStep+=1;
 	});
-	exec(`ssh ${user}@${ip} -y cat ${serversJson}`,(error,stdout,stderr)=>{
-		if(error) log("ERROR: "+error);
-		if(stderr) log("STDERR: "+stderr);
-		const json=JSON.parse(stdout.trim());
+	exec(`ssh ${user}@${ip} cat ${serversJson}`,(error,stdout,stderr)=>{
+		if(error||stderr){
+			log("ERROR: "+error);
+			log("STDERR: "+stderr);
+			log("STDOUT: "+stdout);
+			return;
+		}
+		const json=JSON.parse(stdout.toString("utf-8").trim());
 		this.servers=json;
 		this.startStep+=1;
 	});
@@ -75,6 +83,7 @@ this.startNext=data=>{
 	});
 	fn();
 	*/
+	this.serviceRunning=true;
 	for(const index in this.servers){
 		const server=this.servers[index];
 		this.status.push({
