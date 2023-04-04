@@ -67,7 +67,7 @@ this.startNext=data=>{
 			fetch(`http://${ip}:${server.httpPort}/get/serverStatus`)
 				.then(r=>r.json())
 				.then(r=>this.handleServerResponse({
-					serverOnline: true,
+					serverOnline: true,#
 					serverResponse: r,
 					requestPath: "/get/serverStatus",
 					serverIndex: new Number(index),
