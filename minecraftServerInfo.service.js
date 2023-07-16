@@ -60,29 +60,6 @@ this.start=()=>{
 	}
 };
 this.startNext=data=>{
-	/*const fn=(()=>{
-		for(let index in this.servers){
-			const server=this.servers[index];
-			if(!server.httpPort) continue;
-			fetch(`http://${ip}:${server.httpPort}/get/serverStatus`)
-				.then(r=>r.json())
-				.then(r=>this.handleServerResponse({
-					serverOnline: true,#
-					serverResponse: r,
-					requestPath: "/get/serverStatus",
-					serverIndex: new Number(index),
-				}))
-				.catch(()=>this.handleServerResponse({
-					serverOnline: false,
-					serverResponse: null,
-					requestPath: "/get/serverStatus",
-					serverIndex: new Number(index),
-				}));
-		}
-		if(this.serviceRunning) setTimeout(fn,2e3);
-	});
-	fn();
-	*/
 	this.serviceRunning=true;
 	for(const index in this.servers){
 		const server=this.servers[index];
@@ -216,44 +193,6 @@ this.startNext=data=>{
 		});
 	});
 };
-/*this.handleServerResponse=data=>{
-	const {
-		serverOnline,
-		serverResponse,
-		requestPath,
-		serverIndex,
-	}=data;
-
-	if(requestPath=="/get/serverStatus"){
-		const server=this.servers[serverIndex];
-		const key=server.id?server.id:String(serverIndex);
-		const old=this.status[key];
-
-		this.status[key]=(
-			serverOnline?{
-				...statusTemplate,
-				...serverResponse,
-				socketOnline: true,
-			}:{
-				...statusTemplate,
-				socketOnline:false,
-			}
-		);
-
-		if(
-			JSON.stringify(old)!=
-			JSON.stringify(this.status[key])
-		){
-			this.io.emit("update-serverStatus",{
-				id: key,
-				status: {
-					id: key,
-					...this.status[key],
-				},
-			});
-		}
-	}
-}*/
 this.stop=()=>{
 	this.io.emit("shutdown",0);
 	this.io.close();

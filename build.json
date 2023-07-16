@@ -2,7 +2,7 @@
 	{
 		"type": "google-closure-compiler",
 		"file": "app.js",
-		"language": "ECMASCRIPT3",
+		"language": "ECMASCRIPT5",
 		"polyfills": false
 	}
 ]
