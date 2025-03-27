@@ -53,7 +53,7 @@ this.startNext=data=>{
 				this.io.emit("updateStatusKey",{
 					id: server.id,
 					key: "socketOnline",
-					value: true,
+					value: false,
 				});
 
 				socket.on("serverStatus",status=>{
