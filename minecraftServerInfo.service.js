@@ -17,9 +17,15 @@ this.start=()=>{
 	this.startStep=2;
 	this.serverSocketIps=[
 		"http://localhost:3501",
+		"http://localhost:3502",
+		"http://localhost:3503",
+		"http://localhost:3504",
+		"http://localhost:3505",
 	];
 	this.servers=[];
 	this.status=new Map();
+	this.messages={};
+	this.logs={};
 	{
 		const fn=()=>{
 			if(this.startStep==2){
@@ -44,6 +50,9 @@ this.startNext=data=>{
 					id: server.id,
 					socket,
 				});
+				this.logs[server.id]=[];
+				this.messages[server.id]=[];
+
 				console.log(server.name+": "+socket.id);
 				this.status.set(server.id,{
 					...statusTemplate,
@@ -65,6 +74,7 @@ this.startNext=data=>{
 				});
 				socket.on("playerJoin",playerName=>{
 					const status=this.status.get(server.id);
+					if(status.players.includes(playerName)) return;
 					this.status.set(server.id,{
 						...statusTemplate,
 						...status,
@@ -123,6 +133,14 @@ this.startNext=data=>{
 					});
 					this.io.emit("loadStatusTemplate",server.id);
 				});
+				socket.on("message",([time,player,msg])=>{
+					this.messages[server.id].push([time,player,msg]);
+					this.io.emit("message",[server.id,time,player,msg]);
+				});
+				socket.on("log",([time,msg])=>{
+					this.logs[server.id].push([time,msg]);
+					this.io.emit("log",[server.id,time,msg]);
+				});
 
 				socket.emit("serverStatus");
 			});
@@ -145,6 +163,8 @@ this.startNext=data=>{
 
 		socket.emit("servers",this.servers);
 		socket.emit("serverStatus",this.statusToArray());
+		socket.emit("messages",this.messages);
+		socket.emit("logs",this.logs);
 
 		socket.on("disconnect",()=>{
 			log("socket "+socket.id+" has disconnected");

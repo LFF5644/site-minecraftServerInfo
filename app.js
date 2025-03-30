@@ -29,6 +29,8 @@ const model={
 		serverStatus: [],
 		servers: [],
 		view: "overview",
+		messages: {},
+		logs: {},
 	}),
 	setConnected:(state,connected)=>({
 		...state,
@@ -37,6 +39,16 @@ const model={
 	setServers:(state,servers)=>({
 		...state,
 		servers,
+		messages: Object.fromEntries(servers.map(item=>
+			state.messages[item.id]
+			? 	Object.entries(state.messages[item.id])
+			: 	[item.id,[]]
+		)),
+		logs: Object.fromEntries(servers.map(item=>
+			state.logs[item.id]
+			? 	Object.entries(state.logs[item.id])
+			: 	[item.id,[]]
+		)),
 	}),
 	setServerStatus:(state,serverStatus)=>({
 		...state,
@@ -94,6 +106,33 @@ const model={
 				socketOnline: item.socketOnline,
 			}),
 	}),
+	messagePush: (state,[serverId,time,player,msg])=>({
+		...state,
+		messages:{
+			...state.messages,
+			[serverId]: [
+				...state.messages[serverId],
+				{
+					id: time,
+					playerName: player,
+					playerMsg: msg,
+				},
+			],
+		},
+	}),
+	logPush: (state,[serverId,time,msg])=>({
+		...state,
+		logs:{
+			...state.logs,
+			[serverId]: [
+				...state.logs[serverId],
+				{
+					id: time,
+					log: msg,
+				},
+			],
+		},
+	}),
 };
 
 function getToken(){
@@ -140,6 +179,8 @@ function Server({I,state,actions}){
 function ViewServerInfo({id,state,actions}){
 	const server=state.servers.find(item=>item.id===id);
 	const status=state.serverStatus.find(item=>item.id===id);
+	let counter=1e3;
+	const idCounter=()=>{counter+=100;return counter;}
 	return[
 		node_dom("h1[className=withButton]",null,[
 			node_dom("button[innerText=Back]",{
@@ -166,6 +207,42 @@ function ViewServerInfo({id,state,actions}){
 				},
 			}),
 		]),
+		node_dom("div[id=messages]",null,[
+			node_map(History,[
+				...state.messages[server.id]
+					.map(item=>({
+						type: "message",
+						msg: item.playerMsg,
+						player: item.playerName,
+						id: item.id,
+					})),
+				...state.logs[server.id]
+					.filter(item=>!state.messages[server.id]
+						.some(i=>i.id===item.id)
+					)
+					.map(item=>({
+						type: "log",
+						msg: item.log,
+						player: null,
+						id: item.id,
+					})),
+			]
+				.sort((item,i)=>item.id-i.id)
+			,{state,actions}),
+		]),
+	];
+}
+function History({I,state,actions}){
+	return[
+		I.type==="message"&&
+		node_dom("p",{
+			innerText: I.player+": "+I.msg,
+		}),
+
+		I.type==="log"&&
+		node_dom("p",{
+			innerText: "LOG: "+I.msg,
+		}),
 	];
 }
 
@@ -194,6 +271,8 @@ init(()=>{
 		socket.on("playerJoin",actions.addPlayerToServerStatus);
 		socket.on("playerLeft",actions.removePlayerFromServerStatus);
 		socket.on("loadStatusTemplate",actions.setServerStatusToTemplate);
+		socket.on("message",actions.messagePush);
+		socket.on("log",actions.logPush);
 
 		socket.onAny(console.log);
 	});
