@@ -44,6 +44,11 @@ this.startNext=data=>{
 		socket.on("connect",()=>{
 			socket.emit("get-serverObject");
 			socket.on("serverObject",server=>{
+				if(this.socketServers.some(item=>item.id===server.id)){
+					log("SERVER ALREADY EXISTS. DISCONNECT "+server.id);
+					socket.disconnect();
+					return;
+				}
 				this.servers.push(server);
 				this.socketServers.push({
 					id: server.id,
@@ -110,6 +115,7 @@ this.startNext=data=>{
 						key: "socketOnline",
 						value: false,
 					});
+					log("disconnect "+server.id);
 					this.socketServers=this.socketServers.filter(item=>item.id!==server.id);
 				});
 				socket.on("updateStatusKey",(key,value)=>{
@@ -140,7 +146,7 @@ this.startNext=data=>{
 				socket.on("histories",histories=>{
 					log("resived server historie with "+histories.length+" items");
 					this.histories[server.id]=histories;
-					socket.emit("all-histories",this.histories);
+					this.io.emit("all-histories",this.histories);
 				});
 
 				socket.emit("serverStatus");
@@ -195,6 +201,8 @@ this.stop=()=>{
 	this.io.close();
 	for(const server of this.socketServers){
 		server.socket.disconnect();
+		server.socket.close();
+		delete server.socket;
 	}
 	this.socketServers=[];
 	this.serviceRunning=false;
