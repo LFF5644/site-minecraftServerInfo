@@ -23,9 +23,55 @@ h1.withButton > button:hover{
 	border-color: red;
 }
 
+p.withButton{
+	display: flex;
+	margin-right: 0;
+}
+p.withButton > input{
+	flex: 1;
+}
+p.withButton > button{
+	color: red;
+	border-radius: 5px;
+	border: 2px darkblue solid;
+}
+p.withButton > button:hover{
+	border-color: green;
+}
+
 p.serverItem > span.name{
 	cursor: pointer;
 }
 p.serverItem > span.name:hover{
 	text-decoration: underline;
+}
+
+div.messages{
+	margin-top: 50px;
+	margin-bottom: 20px;
+}
+div.messages > p.message{
+	/*...*/
+}
+div.messages > p.message > span.date{
+	color: gray;
+	font-style: italic;
+}
+div.messages > p.message > span.player{
+	color: orange;
+	font-style: bold;
+}
+div.messages > p.message > span.content{
+	/*...*/
+}
+
+p.withButton.chatbox{
+	/*...*/
+}
+p.withButton.chatbox > input{
+	margin-right: 10px;
+	font-size: 110%;
+}
+p.withButton.chatbox > button{
+	padding: 5px 8px 5px 8px;
 }

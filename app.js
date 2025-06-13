@@ -29,9 +29,13 @@ const model={
 		serverStatus: [],
 		servers: [],
 		view: "overview",
-		messages: {},
-		logs: {},
+		histories: {},
 	}),
+	logState: (state,debug)=>{
+		if(debug) debugger;
+		console.log("SATE:",state);
+		return state;
+	},
 	setConnected:(state,connected)=>({
 		...state,
 		connected,
@@ -39,14 +43,9 @@ const model={
 	setServers:(state,servers)=>({
 		...state,
 		servers,
-		messages: Object.fromEntries(servers.map(item=>
-			state.messages[item.id]
-			? 	Object.entries(state.messages[item.id])
-			: 	[item.id,[]]
-		)),
-		logs: Object.fromEntries(servers.map(item=>
-			state.logs[item.id]
-			? 	Object.entries(state.logs[item.id])
+		histories: Object.fromEntries(servers.map(item=>
+			state.histories[item.id]
+			? 	Object.entries(state.histories[item.id])
 			: 	[item.id,[]]
 		)),
 	}),
@@ -106,35 +105,32 @@ const model={
 				socketOnline: item.socketOnline,
 			}),
 	}),
-	messagePush: (state,[serverId,time,player,msg])=>({
+	historyPush: (state,[serverId,time,type,...data])=>({
 		...state,
-		messages:{
-			...state.messages,
+		histories:{
+			...state.histories,
 			[serverId]: [
-				...state.messages[serverId],
+				...state.histories[serverId],
 				{
 					id: time,
-					playerName: player,
-					playerMsg: msg,
+					type,
+					data,
 				},
 			],
 		},
 	}),
-	logPush: (state,[serverId,time,msg])=>({
+	setAllHistories: (state,histories)=>({
 		...state,
-		logs:{
-			...state.logs,
-			[serverId]: [
-				...state.logs[serverId],
-				{
-					id: time,
-					log: msg,
-				},
-			],
-		},
+		histories: Object.fromEntries(Object.entries(histories).map(item=>([
+			item[0],
+			item[1].map(i=>({
+				id: i[0],
+				type: i[1],
+				data: i.slice(2),
+			}))
+		]))),
 	}),
 };
-
 function getToken(){
 	const cookie=document.cookie.split("; ").find(item=>item.startsWith("token="));
 	if(cookie) return cookie.substring(6);
@@ -207,41 +203,49 @@ function ViewServerInfo({id,state,actions}){
 				},
 			}),
 		]),
-		node_dom("div[id=messages]",null,[
-			node_map(History,[
-				...state.messages[server.id]
-					.map(item=>({
-						type: "message",
-						msg: item.playerMsg,
-						player: item.playerName,
-						id: item.id,
-					})),
-				...state.logs[server.id]
-					.filter(item=>!state.messages[server.id]
-						.some(i=>i.id===item.id)
-					)
-					.map(item=>({
-						type: "log",
-						msg: item.log,
-						player: null,
-						id: item.id,
-					})),
-			]
-				.sort((item,i)=>item.id-i.id)
-			,{state,actions}),
+		node_dom("div[className=messages]",null,[
+			node_map(
+				History,
+				state.histories[id].filter(item=>item.type==="message"),
+				{state,actions}),
+		]),
+		node_dom("p[className=withButton chatbox]",null,[
+			node_dom("input[title=Schreibe mit Minecraft-Chat][hint=Hallo!][id=msg]"),
+			node_dom("button[innerText=>]",{
+				onclick:()=>{
+					const input=document.getElementById("msg");
+					const value=input.value;
+					if(!value) return;
+					socket.emit("post-msg",id,value);
+					input.value="";
+				},
+			}),
 		]),
 	];
 }
 function History({I,state,actions}){
+	const now=Date.now();
+	const showFullDate=now-I.id>1e3*60*60*24;
+	const date=new Date(I.id);
+	const dateStr=showFullDate?date.toLocaleString():date.toLocaleTimeString();
 	return[
 		I.type==="message"&&
-		node_dom("p",{
-			innerText: I.player+": "+I.msg,
-		}),
+		node_dom("p[className=message]",null,[
+			node_dom("span[className=date]",{innerText:dateStr}),
+			node_dom("span[innerText=: ]"),
+			node_dom("span[className=player]",{
+				innerText: I.data[0],
+				S:{
+					"color": I.data[2]==="minecraft"?"green":"orange",
+				},
+			}),
+			node_dom("span[innerText=: ]"),
+			node_dom("span[className=content]",{innerText:I.data[1]}),
+		]),
 
 		I.type==="log"&&
 		node_dom("p",{
-			innerText: "LOG: "+I.msg,
+			innerText: "LOG: "+I.data[0],
 		}),
 	];
 }
@@ -271,10 +275,12 @@ init(()=>{
 		socket.on("playerJoin",actions.addPlayerToServerStatus);
 		socket.on("playerLeft",actions.removePlayerFromServerStatus);
 		socket.on("loadStatusTemplate",actions.setServerStatusToTemplate);
-		socket.on("message",actions.messagePush);
-		socket.on("log",actions.logPush);
+		socket.on("history",actions.historyPush);
+		socket.on("all-histories",actions.setAllHistories);
 
 		socket.onAny(console.log);
+
+		window.logState=actions.logState;
 	});
 
 	return[null,[

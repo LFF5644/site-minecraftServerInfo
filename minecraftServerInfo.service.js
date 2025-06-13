@@ -24,8 +24,7 @@ this.start=()=>{
 	];
 	this.servers=[];
 	this.status=new Map();
-	this.messages={};
-	this.logs={};
+	this.histories={};
 	{
 		const fn=()=>{
 			if(this.startStep==2){
@@ -50,8 +49,7 @@ this.startNext=data=>{
 					id: server.id,
 					socket,
 				});
-				this.logs[server.id]=[];
-				this.messages[server.id]=[];
+				this.histories[server.id]=[];
 
 				console.log(server.name+": "+socket.id);
 				this.status.set(server.id,{
@@ -112,6 +110,7 @@ this.startNext=data=>{
 						key: "socketOnline",
 						value: false,
 					});
+					this.socketServers=this.socketServers.filter(item=>item.id!==server.id);
 				});
 				socket.on("updateStatusKey",(key,value)=>{
 					this.status.set(server.id,{
@@ -133,16 +132,19 @@ this.startNext=data=>{
 					});
 					this.io.emit("loadStatusTemplate",server.id);
 				});
-				socket.on("message",([time,player,msg])=>{
-					this.messages[server.id].push([time,player,msg]);
-					this.io.emit("message",[server.id,time,player,msg]);
+				socket.on("history",([time,type,...data])=>{
+					if(this.histories[server.id].some(item=>item[0]===time)) return;
+					this.histories[server.id].push([time,type,...data]);
+					this.io.emit("history",[server.id,time,type,...data]);
 				});
-				socket.on("log",([time,msg])=>{
-					this.logs[server.id].push([time,msg]);
-					this.io.emit("log",[server.id,time,msg]);
+				socket.on("histories",histories=>{
+					log("resived server historie with "+histories.length+" items");
+					this.histories[server.id]=histories;
+					socket.emit("all-histories",this.histories);
 				});
 
 				socket.emit("serverStatus");
+				socket.emit("histories");
 			});
 		});
 	}
@@ -163,8 +165,7 @@ this.startNext=data=>{
 
 		socket.emit("servers",this.servers);
 		socket.emit("serverStatus",this.statusToArray());
-		socket.emit("messages",this.messages);
-		socket.emit("logs",this.logs);
+		socket.emit("all-histories",this.histories);
 
 		socket.on("disconnect",()=>{
 			log("socket "+socket.id+" has disconnected");
@@ -175,6 +176,15 @@ this.startNext=data=>{
 		socket.on("get-serverStatus",()=>{
 			socket.emit("get-serverStatus",this.statusToArray());
 		});
+		socket.on("post-msg",(serverId,msg,cb=()=>{})=>{
+			const server=this.socketServers.find(item=>item.id===serverId);
+			if(!server) {cb(false);return false;}
+			const socket=server.socket;
+			
+			//const getCMD=(player,msg)=>`tellraw @a ["",{"text":"${player}","bold":true,"color":"gold","clickEvent":{"action":"open_url","value":"https://lff.one/minecraftServerInfo"},"hoverEvent":{"action":"show_text","contents":["is writing over ",{"text":"LFF.one","bold":true,"color":"dark_green"}]}},": ${msg}"]`;
+			socket.emit("writeMessage","Webseitnutzer",msg,"web",cb);
+			log("sended: "+msg);
+		})
 	});
 };
 this.statusToArray=()=>{
@@ -186,5 +196,6 @@ this.stop=()=>{
 	for(const server of this.socketServers){
 		server.socket.disconnect();
 	}
+	this.socketServers=[];
 	this.serviceRunning=false;
 };
