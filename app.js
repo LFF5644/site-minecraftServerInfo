@@ -28,7 +28,7 @@ const model={
 		connected: false,
 		serverStatus: [],
 		servers: [],
-		view: "overview",
+		view: "overview", // TODO: location.hash.substring(1) || "overview"
 		histories: {},
 	}),
 	logState: (state,debug)=>{

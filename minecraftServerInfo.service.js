@@ -25,7 +25,7 @@ this.start=()=>{
 	this.servers=[];
 	this.status=new Map();
 	this.histories={};
-	{
+	/*{
 		const fn=()=>{
 			if(this.startStep==2){
 				this.startNext();
@@ -34,9 +34,10 @@ this.start=()=>{
 			}
 		}
 		setTimeout(fn,3e2);
-	}
+	}*/
+	this.startNext();
 };
-this.startNext=data=>{
+this.startNext=()=>{
 	this.serviceRunning=true;
 	for(const ip of this.serverSocketIps){
 		const socket=socketIoClient(ip);
@@ -45,9 +46,12 @@ this.startNext=data=>{
 			socket.emit("get-serverObject");
 			socket.on("serverObject",server=>{
 				if(this.socketServers.some(item=>item.id===server.id)){
-					log("SERVER ALREADY EXISTS. DISCONNECT "+server.id);
-					socket.disconnect();
-					return;
+					for(const client of this.socketServers.filter(item=>item.id===server.id)){
+						log("Server Already exists, disconnecting old sessions "+client.id);
+						// Disconnect old sessions
+						client.socket.disconnect();
+						client.socket.close();
+					}
 				}
 				this.servers.push(server);
 				this.socketServers.push({
@@ -139,7 +143,7 @@ this.startNext=data=>{
 					this.io.emit("loadStatusTemplate",server.id);
 				});
 				socket.on("history",([time,type,...data])=>{
-					if(this.histories[server.id].some(item=>item[0]===time)) return;
+					//if(this.histories[server.id].some(item=>item[0]===time)) return;
 					this.histories[server.id].push([time,type,...data]);
 					this.io.emit("history",[server.id,time,type,...data]);
 				});
@@ -171,7 +175,7 @@ this.startNext=data=>{
 
 		socket.emit("servers",this.servers);
 		socket.emit("serverStatus",this.statusToArray());
-		socket.emit("all-histories",this.histories);
+		socket.emit("all-histories",Object.fromEntries(Object.entries(this.histories).map(item=>[item[0],item[1].filter(i=>i[1]==="message")])));
 
 		socket.on("disconnect",()=>{
 			log("socket "+socket.id+" has disconnected");
